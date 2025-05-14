@@ -1,0 +1,18 @@
+[package]
+name = "net-experiments"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+prost = "0.13"
+bytes = "1.10"
+flatbuffers = "25.2"
+quiche = "0.24"
+ring = "0.17"
+mio = { version = "1.0", features = ["net", "os-poll"] }
+s2n-quic = "1.58"
+s2n-tls = "0.3"
+tokio = { version = "1.45", features = ["full", "mio", "bytes"] }
+
+[build-dependencies]
+prost-build = "0.13"
