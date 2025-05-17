@@ -13,6 +13,7 @@ mio = { version = "1.0", features = ["net", "os-poll"] }
 s2n-quic = "1.58"
 s2n-tls = "0.3"
 tokio = { version = "1.45", features = ["full", "mio", "bytes"] }
+blake3 = "1.8"
 
 [build-dependencies]
 prost-build = "0.13"
