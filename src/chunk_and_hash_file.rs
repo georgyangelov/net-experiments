@@ -1,19 +1,25 @@
 use std::cmp::min;
 use std::fs::File;
 use std::io::{ErrorKind, Read};
+use std::time::Instant;
 
 pub fn run() {
     // let hash = hash_file("src/main.rs");
     // let hash_hex = hash.to_hex();
     // println!("Hash: {hash_hex}")
 
+    let now = Instant::now();
+
     let chunks = chunk_hash_file(
-        "/Users/stormbreaker/Downloads/secret2 (1).webm",
-        64*1024,
-        8*1024
+        "/Users/stormbreaker/Downloads/big-file.data",
+        1*1024*1024,
+        1*1024*1024
     );
 
-    println!("Chunks: {chunks:?}")
+    let chunk_count = chunks.len();
+    let elapsed = now.elapsed().as_secs_f32() * 1000f32;
+
+    println!("Computed {chunk_count} chunks in {elapsed}ms")
 }
 
 fn hash_file(path: &str) -> blake3::Hash {
@@ -29,7 +35,7 @@ fn hash_file(path: &str) -> blake3::Hash {
 }
 
 fn chunk_hash_file(path: &str, chunk_size: usize, read_size: usize) -> Vec<blake3::Hash> {
-    assert!(read_size < chunk_size);
+    assert!(read_size <= chunk_size);
     assert_eq!(chunk_size % read_size, 0);
 
     let mut hasher = blake3::Hasher::new();

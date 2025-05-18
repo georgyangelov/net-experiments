@@ -17,3 +17,7 @@ blake3 = "1.8"
 
 [build-dependencies]
 prost-build = "0.13"
+
+[profile.profiling]
+inherits = "release"
+debug = true
