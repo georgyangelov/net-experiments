@@ -4,22 +4,22 @@ use std::io::{ErrorKind, Read};
 use std::time::Instant;
 
 pub fn run() {
-    // let hash = hash_file("src/main.rs");
-    // let hash_hex = hash.to_hex();
-    // println!("Hash: {hash_hex}")
-
     let now = Instant::now();
+
+    // let hash = hash_file("/Users/stormbreaker/Downloads/big-file.data");
+    // let hash_hex = hash.to_hex();
 
     let chunks = chunk_hash_file(
         "/Users/stormbreaker/Downloads/big-file.data",
         1*1024*1024,
-        1*1024*1024
+        64*1024
     );
 
     let chunk_count = chunks.len();
     let elapsed = now.elapsed().as_secs_f32() * 1000f32;
 
     println!("Computed {chunk_count} chunks in {elapsed}ms")
+    // println!("Computed {hash_hex} in {elapsed}ms")
 }
 
 fn hash_file(path: &str) -> blake3::Hash {
