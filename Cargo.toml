@@ -15,9 +15,11 @@ s2n-tls = "0.3"
 tokio = { version = "1.45", features = ["full", "mio", "bytes"] }
 blake3 = "1.8"
 heed = "0.22"
+cxx = "1.0"
 
 [build-dependencies]
 prost-build = "0.13"
+cxx-build = "1.0"
 
 [profile.profiling]
 inherits = "release"
