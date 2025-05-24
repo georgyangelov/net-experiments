@@ -72,8 +72,12 @@ impl Debug for CouldNotStartListeningErr {
 }
 
 impl FSEvents {
-    pub fn new(config: FSEventConfig, callback: Box<dyn Fn(&FSEvent)>) -> Result<Self, ()> {
-        let context = FSEventContext { callback };
+    pub fn new<F>(config: FSEventConfig, callback: F) -> Result<Self, ()>
+        where F: Fn(&FSEvent),
+              // This is required as the function is executed on other threads
+              F: Send + 'static
+    {
+        let context = FSEventContext { callback: Box::new(callback) };
         let raw_config = RawFSEventConfig{
             paths_to_watch: config.paths_to_watch,
             latency_sec: config.latency.as_secs_f64(),

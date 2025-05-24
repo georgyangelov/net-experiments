@@ -28,9 +28,9 @@ fn main() {
         flags: config_flags::FILE_EVENTS | config_flags::IGNORE_SELF
     };
 
-    let fs_events = FSEvents::new(config, Box::new(|e| {
+    let fs_events = FSEvents::new(config, |e| {
         println!("Event: {:?}", e.items);
-    })).expect("could not configure FSEvents listener");
+    }).expect("could not configure FSEvents listener");
 
     let listener = fs_events.start_listening().expect("could not start listening");
     println!("Started listening");
