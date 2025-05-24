@@ -1,6 +1,8 @@
 #![allow(dead_code)]
 
-use net_experiments::fs_event_lib::FSEvents;
+use std::thread;
+use std::time::Duration;
+use net_experiments::fs_event_lib::{config_flags, FSEventConfig, FSEvents};
 
 mod chunk_and_hash_file;
 mod s2n_quic_protobuf;
@@ -19,34 +21,22 @@ fn main() {
     // chunk_and_hash_parallel_bytes::run();
     // lmdb::run();
 
-    let mut fs_events = FSEvents::new(Box::new(|e| {
+    let config = FSEventConfig{
+        paths_to_watch: vec!["/Users/stormbreaker/dev/net-experiments".into()],
+        latency: Duration::from_millis(1000),
+        since_event_id: None,
+        flags: config_flags::FILE_EVENTS | config_flags::IGNORE_SELF
+    };
+
+    let fs_events = FSEvents::new(config, Box::new(|e| {
         println!("Event: {:?}", e.items);
-    }));
+    })).expect("could not configure FSEvents listener");
 
-    fs_events.listen();
+    let listener = fs_events.start_listening().expect("could not start listening");
+    println!("Started listening");
 
-    // let test = String::from("test");
-    // let test_ref = &test;
-    //
-    // let f = || { test_ref.clone() };
-    //
-    // testt(f);
-    //
-    // println!("{}", test);
+    thread::sleep(Duration::from_secs(5));
 
-    // let context = Box::new(FSEventContext {});
-    //
-    // let mut client = ffi::new_fs_events_monitor(context, |ctx, msg| println!("{msg}"));
-    // let client = client.pin_mut();
-    // let result = client.start();
-    //
-    // println!("Result: {result:?}")
-}
-
-fn testt<F>(f: F) where F: Fn() -> String {
-    println!("{}", f());
-}
-
-pub(crate) fn on_fs_change(log: String) {
-    println!("FS Change: {log}")
+    listener.stop_listening();
+    println!("Stopped listening");
 }

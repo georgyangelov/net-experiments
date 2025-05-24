@@ -1,16 +1,15 @@
 #include "net-experiments/cpp/include/fs_events.h"
 #include "net-experiments/src/fs_event_lib.rs.h"
 
-#include <CoreServices/CoreServices.h>
-
-#include <iostream>
 #include <memory>
 
 std::unique_ptr<MacOSFSEventsMonitor> new_fs_events_monitor(
+    const RawFSEventConfig& config,
     rust::Box<FSEventContext> context,
     const FSCallback callback
 ) {
     return std::make_unique<MacOSFSEventsMonitor>(
+        config,
         context,
         callback
     );
@@ -24,13 +23,13 @@ void fsCallback(
     const FSEventStreamEventFlags * event_flags,
     const FSEventStreamEventId * event_ids
 ) {
-    auto monitor = static_cast<MacOSFSEventsMonitor*>(client_call_back_info);
+    (void)_stream_ref;
 
-    auto paths = static_cast<char **>(event_paths);
+    const auto monitor = static_cast<MacOSFSEventsMonitor*>(client_call_back_info);
+    const auto paths = static_cast<char **>(event_paths);
 
     rust::Vec<FSEventItem> items;
-
-    std::cout << "Callback, num events: " << num_events << std::endl;
+    items.reserve(num_events);
 
     for (size_t i = 0; i < num_events; ++i) {
         items.push_back(FSEventItem{
@@ -38,66 +37,89 @@ void fsCallback(
             .flags = event_flags[i],
             .event_id = event_ids[i]
         });
-
-        std::cout << "Changed path: " << paths[i] << std::endl;
-        std::cout << "Flags: 0x" << std::hex << event_flags[i] << std::endl;
     }
 
     monitor->callback(monitor->context.operator*(), FSEvent{
         .items = items
     });
-
-//    monitor->callback(monitor->context.operator*(), "Event");
-    
-    // on_fs_change("Callback executed");
 }
 
-FSEventStartResult MacOSFSEventsMonitor::start() {
-    std::cout << "Registering for events..." << std::endl;
+MacOSFSEventsMonitor::MacOSFSEventsMonitor(
+    const RawFSEventConfig& config,
+    rust::Box<FSEventContext>& _context,
+    const FSCallback _callback
+  ) : context(std::move(_context)),
+      callback(_callback) {
 
-    // Create a Run loop: https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/Multithreading/RunLoopManagement/RunLoopManagement.html#//apple_ref/doc/uid/10000057i-CH16-SW1
-    // CFRunLoopGetCurrent();
+    const auto pathsToWatch = CFArrayCreateMutable(
+        nullptr,
+        config.paths_to_watch.size(),
+        &kCFTypeArrayCallBacks
+    );
 
-    /* Define variables and create a CFArray object containing
-       CFString objects containing paths to watch.
-     */
-    CFStringRef mypath = CFSTR("/Users/stormbreaker/dev/net-experiments");
-    CFArrayRef pathsToWatch = CFArrayCreate(nullptr, (const void **)&mypath, 1, nullptr);
+    for (auto path: config.paths_to_watch) {
+        const auto str = CFStringCreateWithCString(nullptr, path.c_str(), kCFStringEncodingUTF8);
 
-    // TODO: Clean up for this using the callback
-    FSEventStreamContext *callbackInfo = new FSEventStreamContext{
-        .info = this
-    }; // could put stream-specific data here.
-    FSEventStreamRef stream = nullptr;
-    CFAbsoluteTime latency = 3.0; /* Latency in seconds */
+        CFArrayAppendValue(pathsToWatch, str);
+
+        // Retained by the array callback
+        CFRelease(str);
+    }
+
+    auto *callbackInfo = new FSEventStreamContext{
+        .info = this,
+    };
 
     /* Create the stream, passing in a callback */
-    stream = FSEventStreamCreate(
+    this->stream = FSEventStreamCreate(
         nullptr,
         &fsCallback,
         callbackInfo,
         pathsToWatch,
-        kFSEventStreamEventIdSinceNow, /* Or a previous event ID */
-        latency,
-        kFSEventStreamCreateFlagIgnoreSelf | kFSEventStreamCreateFlagFileEvents
+        config.since_when,
+        config.latency_sec,
+        config.flags
     );
 
-    std::cout << "Created event stream" << std::endl;
+    if (this->stream) {
+        // https://developer.apple.com/library/archive/documentation/General/Conceptual/ConcurrencyProgrammingGuide/Introduction/Introduction.html#//apple_ref/doc/uid/TP40008091-CH1-SW1
+        this->queue = dispatch_queue_create("net.gangelov.fsevents", nullptr);
 
-    /* Create the stream before calling this. */
-    FSEventStreamScheduleWithRunLoop(stream, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
+        FSEventStreamSetDispatchQueue(this->stream, this->queue);
+    } else {
+        this->queue = nullptr;
+    }
+}
 
-    auto success = FSEventStreamStart(stream);
-    if (!success) {
-        return FSEventStartResult::Failed;
-        // return "FSEventStreamStart failed";
+MacOSFSEventsMonitor::~MacOSFSEventsMonitor() {
+    // Removes FSEventStreamSetDispatchQueue
+    if (this->stream) {
+        FSEventStreamInvalidate(this->stream);
     }
 
-    std::cout << "Starting the thread run loop" << std::endl;
-    CFRunLoopRun();
+    // Decrements the stream refcount, should become 0 now
+    if (this->stream) {
+        FSEventStreamRelease(this->stream);
+    }
 
-    std::cout << "Run loop ended" << std::endl;
+    // Release the queue
+    if (this->queue) {
+        dispatch_release(this->queue);
+    }
+}
 
-    // return "Hello world";
-    return FSEventStartResult::Done;
+bool MacOSFSEventsMonitor::valid() const {
+    return this->stream != nullptr && this->queue != nullptr;
+}
+
+bool MacOSFSEventsMonitor::start() {
+    if (!this->stream) {
+        return false;
+    }
+
+    return FSEventStreamStart(stream);
+}
+
+void MacOSFSEventsMonitor::stop() {
+    FSEventStreamStop(stream);
 }
