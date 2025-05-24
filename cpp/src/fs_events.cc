@@ -81,6 +81,8 @@ MacOSFSEventsMonitor::MacOSFSEventsMonitor(
         config.flags
     );
 
+    CFRelease(pathsToWatch);
+
     if (this->stream) {
         // https://developer.apple.com/library/archive/documentation/General/Conceptual/ConcurrencyProgrammingGuide/Introduction/Introduction.html#//apple_ref/doc/uid/TP40008091-CH1-SW1
         this->queue = dispatch_queue_create("net.gangelov.fsevents", nullptr);

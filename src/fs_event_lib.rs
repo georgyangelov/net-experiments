@@ -6,6 +6,9 @@ pub use ffi::{FSEvent};
 pub use ffi::{FSEventItem};
 use crate::fs_event_lib::ffi::{RawFSEventConfig};
 
+/// https://developer.apple.com/library/archive/documentation/Darwin/Conceptual/FSEvents_ProgGuide/UsingtheFSEventsFramework/UsingtheFSEventsFramework.html#//apple_ref/doc/uid/TP40005289-CH4-SW4
+///
+/// TODO: FS Events may be disabled per volume, how do we check for that?
 pub struct FSEvents {
     monitor: UniquePtr<ffi::MacOSFSEventsMonitor>
 }
