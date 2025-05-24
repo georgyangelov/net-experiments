@@ -1,5 +1,5 @@
-#include "net-experiments/cpp/hello.h"
-#include "net-experiments/src/main.rs.h"
+#include "net-experiments/cpp/include/fs_events.h"
+#include "net-experiments/src/fs_event_lib.rs.h"
 
 #include <CoreServices/CoreServices.h>
 
@@ -8,7 +8,7 @@
 
 std::unique_ptr<MacOSFSEventsMonitor> new_fs_events_monitor(
     rust::Box<FSEventContext> context,
-    const rust::Fn<void(FSEventContext&, rust::String)> callback
+    const FSCallback callback
 ) {
     return std::make_unique<MacOSFSEventsMonitor>(
         context,
@@ -22,20 +22,32 @@ void fsCallback(
     size_t num_events,
     void * event_paths,
     const FSEventStreamEventFlags * event_flags,
-    const FSEventStreamEventId * _event_ids
+    const FSEventStreamEventId * event_ids
 ) {
     auto monitor = static_cast<MacOSFSEventsMonitor*>(client_call_back_info);
 
     auto paths = static_cast<char **>(event_paths);
 
+    rust::Vec<FSEventItem> items;
+
     std::cout << "Callback, num events: " << num_events << std::endl;
 
     for (size_t i = 0; i < num_events; ++i) {
+        items.push_back(FSEventItem{
+            .path = paths[i],
+            .flags = event_flags[i],
+            .event_id = event_ids[i]
+        });
+
         std::cout << "Changed path: " << paths[i] << std::endl;
         std::cout << "Flags: 0x" << std::hex << event_flags[i] << std::endl;
     }
 
-    monitor->callback(monitor->context.operator*(), "Event");
+    monitor->callback(monitor->context.operator*(), FSEvent{
+        .items = items
+    });
+
+//    monitor->callback(monitor->context.operator*(), "Event");
     
     // on_fs_change("Callback executed");
 }

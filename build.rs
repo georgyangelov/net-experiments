@@ -3,10 +3,10 @@ use std::io::Result;
 fn main() -> Result<()> {
     prost_build::compile_protos(&["src/types.proto"], &["src/"])?;
 
-    cxx_build::bridge("src/main.rs")
-        .file("cpp/hello.cc")
+    cxx_build::bridge("src/fs_event_lib.rs")
+        .file("cpp/src/fs_events.cc")
         .std("c++17")
-        .flag("-mmacosx-version-min=11.0")
+        // .flag("-mmacosx-version-min=11.0")
         .compile("net-experiments");
 
     println!("cargo:rerun-if-changed=src/main.rs");
