@@ -7,8 +7,10 @@ mod tcp_flatbuffers;
 mod chunk_and_hash_parallel;
 mod chunk_and_hash_parallel_bytes;
 mod lmdb;
-mod scan_dir;
 mod fs_events;
+mod scan_dir;
+mod scan_dir_tree_queue;
+mod scan_dir_tree_recursive;
 
 fn main() {
     // tcp_protobuf::run();
@@ -19,5 +21,7 @@ fn main() {
     // chunk_and_hash_parallel_bytes::run();
     // lmdb::run();
     // fs_events::run();
-    scan_dir::run();
+    // scan_dir::run();
+    // scan_dir_tree_queue::run();
+    scan_dir_tree_recursive::run();
 }

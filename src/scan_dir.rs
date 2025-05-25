@@ -7,7 +7,7 @@ use tokio::time::Instant;
 pub fn run() {
     let now = Instant::now();
 
-    let paths = read_dir_recursive("/Users/stormbreaker".into());
+    let paths = read_dir_recursive("/Users/stormbreaker/dev-work".into());
 
     let elapsed = now.elapsed().as_secs_f32() * 1000f32;
 
