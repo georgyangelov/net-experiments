@@ -1,26 +1,34 @@
 use std::collections::VecDeque;
-use std::fs;
+use std::{fs, thread};
 use std::path::{PathBuf};
+use std::time::Duration;
 use tokio::time::Instant;
 
 pub fn run() {
     let now = Instant::now();
 
-    read_dir_recursive("/Users/stormbreaker/dev-work".into());
+    let paths = read_dir_recursive("/Users/stormbreaker".into());
 
     let elapsed = now.elapsed().as_secs_f32() * 1000f32;
 
-    println!("Done in {elapsed}ms")
+    println!("Done in {elapsed}ms");
+
+    loop {
+        thread::sleep(Duration::from_secs(5));
+
+        println!("Paths: {}", paths.len())
+    }
 }
 
 struct NextDir {
     rel_path: PathBuf,
 }
 
-fn read_dir_recursive(root_path: PathBuf) {
+fn read_dir_recursive(root_path: PathBuf) -> Vec<PathBuf> {
     let mut next_dirs = VecDeque::new();
     let mut dir_count = 0;
     let mut file_count = 0;
+    let mut paths = Vec::new();
 
     next_dirs.push_back(NextDir { rel_path: "".into() });
 
@@ -41,6 +49,8 @@ fn read_dir_recursive(root_path: PathBuf) {
             let typ = entry.file_type().expect("could not get file type");
             let rel_path = next.rel_path.join(name);
 
+            paths.push(rel_path.clone());
+
             if typ.is_dir() {
                 // println!("- {rel_path:?}/");
                 dir_count += 1;
@@ -58,4 +68,6 @@ fn read_dir_recursive(root_path: PathBuf) {
 
     println!("Dirs: {dir_count}");
     println!("Files: {file_count}");
+
+    paths
 }
