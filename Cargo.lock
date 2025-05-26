@@ -980,6 +980,7 @@ dependencies = [
  "ring",
  "s2n-quic",
  "s2n-tls",
+ "smallvec",
  "tokio",
 ]
 

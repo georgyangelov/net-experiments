@@ -13,6 +13,8 @@ mod scan_dir_tree_queue;
 mod scan_dir_tree_recursive;
 mod scan_dir_tree_queue_unsafe;
 mod scan_dir_tree_queue_unsafe_cell;
+mod scan_dir_flat_map;
+mod scan_dir_vec_tree;
 
 fn main() {
     // tcp_protobuf::run();
@@ -27,5 +29,7 @@ fn main() {
     // scan_dir_tree_queue::run();
     // scan_dir_tree_recursive::run();
     // scan_dir_tree_queue_unsafe::run();
-    scan_dir_tree_queue_unsafe_cell::run();
+    // scan_dir_tree_queue_unsafe_cell::run();
+    // scan_dir_flat_map::run();
+    scan_dir_vec_tree::run();
 }
