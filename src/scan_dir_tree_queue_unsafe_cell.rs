@@ -1,9 +1,8 @@
 use std::collections::VecDeque;
 use std::{fs, thread};
-use std::cell::RefCell;
+use std::cell::{UnsafeCell};
 use std::ffi::OsString;
 use std::path::{PathBuf};
-use std::rc::Rc;
 use std::time::Duration;
 use tokio::time::Instant;
 
@@ -29,8 +28,9 @@ struct Node {
 }
 
 enum NodeData {
-    Dir(Rc<RefCell<DirNode>>),
-    File(Rc<RefCell<FileNode>>),
+    // Using UnsafeCell here to allow aliasing mutable references with immutable ones
+    Dir(Box<UnsafeCell<DirNode>>),
+    File(Box<UnsafeCell<FileNode>>),
 }
 
 struct DirNode {
@@ -40,7 +40,7 @@ struct FileNode {}
 
 struct NextDir {
     rel_path: PathBuf,
-    parent_node: Rc<RefCell<DirNode>>
+    parent_node_ptr: *mut DirNode
 }
 
 fn read_dir_recursive(root_path: PathBuf) -> Node {
@@ -48,11 +48,11 @@ fn read_dir_recursive(root_path: PathBuf) -> Node {
     let mut dir_count = 0;
     let mut file_count = 0;
 
-    let root = Rc::new(RefCell::new(DirNode { entries: Vec::new() }));
+    let root_ptr = Box::new(UnsafeCell::new(DirNode { entries: Vec::new() }));
 
     next_dirs.push_back(NextDir {
         rel_path: "".into(),
-        parent_node: root.clone()
+        parent_node_ptr: root_ptr.get()
     });
 
     while let Some(next) = next_dirs.pop_front() {
@@ -72,39 +72,34 @@ fn read_dir_recursive(root_path: PathBuf) -> Node {
             let typ = entry.file_type().expect("could not get file type");
             let rel_path = next.rel_path.join(&name);
 
-            // paths.push(rel_path.clone());
-
             let node_data = if typ.is_dir() {
-                // println!("- {rel_path:?}/");
                 dir_count += 1;
 
-                let dir_node = Rc::new(RefCell::new(DirNode {
+                let dir_node = Box::new(UnsafeCell::new(DirNode {
                     entries: Vec::new()
                 }));
 
                 next_dirs.push_back(NextDir {
                     rel_path,
-                    parent_node: dir_node.clone()
+                    parent_node_ptr: dir_node.get()
                 });
 
                 NodeData::Dir(dir_node)
             } else if typ.is_file() {
                 file_count += 1;
 
-                // println!("- {rel_path:?}")
-
-                NodeData::File(Rc::new(RefCell::new(FileNode {})))
+                NodeData::File(Box::new(UnsafeCell::new(FileNode {})))
             } else {
-                // println!("- {rel_path:?}??")
                 continue;
             };
 
             {
-                let mut parent = next.parent_node.borrow_mut();
-                parent.entries.push(Node {
+                let node_to_push = Node {
                     name,
                     data: node_data
-                });
+                };
+
+                unsafe { (*next.parent_node_ptr).entries.push(node_to_push) }
             }
         }
     }
@@ -114,6 +109,6 @@ fn read_dir_recursive(root_path: PathBuf) -> Node {
 
     Node {
         name: "".into(),
-        data: NodeData::Dir(root)
+        data: NodeData::Dir(root_ptr)
     }
 }
